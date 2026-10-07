@@ -170,7 +170,7 @@
             return;
 
         rememberText(text);
-        if (CONFIG.debug) {console.log("[Teams Alarm] Possible notification:", text);}
+        // if (CONFIG.debug) {console.log("[Teams Alarm] Possible notification:", text);}
         startAlarm("Possible new Teams notification");
     }
 
@@ -259,6 +259,7 @@
 
     window.teamsAlarm = {test: testAlarm, stop: stopAlarm, enable: enable, disable: disable, status: status, destroy: destroy};
     console.log("%c🔔 Teams Message Alarm started", "color:#4ade80;font-size:16px;font-weight:bold");
+    console.log("%cEverything was made with 🩷. Thanks for using XxRagulxX Script", "color: #ff69b4; font-weight: bold;");
     console.log("%cAvailable commands:", "font-weight:bold");
     console.log("teamsAlarm.test()    → Test alarm");
     console.log("teamsAlarm.stop()    → Stop alarm");
