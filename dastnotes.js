@@ -149,7 +149,7 @@
       "Manual_Scan_Performed: No;",
       `Remediation_Guidance_Provided: ${addRecommendation ? "Yes" : "No"};`,
       "Triaging done: Yes;",
-      `Comments: ${vulnerabilities.map(v => v.comment).join(" | ")};`,
+      `Comments: NA;`,
       `Number Vulnerability Triaged: ${totalFP} FP | ${totalConfirmed} Confirmed;`,
       "Vulnerability Breakdown:",
       ...vulnerabilities.map(v =>
