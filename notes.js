@@ -14,16 +14,14 @@
       return field ? (field.value || field.innerText || "").trim() : "";
     };
 
-    const requestType = ask(
-      "Request type:",
-      get("Type of Request") || "False Positive Analysis"
-    );
+    const requestType = ask("Request type:",
+      get("Type of Request") || "False Positive Analysis");
     const appId = ask("Application Service ID:", get("Application Service ID"));
     const cx1 = ask("Cx1 URL:");
     const total = Number(ask("Number of vulnerabilities:", "1"));
 
     if (!Number.isInteger(total) || total < 1)
-      throw new Error("Enter a valid vulnerability count.");
+      throw new Error("Invalid vulnerability count");
 
     const branch = ask("Branch:", get("List Branch Name") || "master");
     const packages = [];
@@ -31,24 +29,17 @@
     for (let i = 1; i <= total; i++) {
       packages.push({
         name: ask(`Vulnerability ${i} - Package name:`),
-        severity: ask(`Vulnerability ${i} - Severity (Critical/High/Medium/Low/Info):`),
+        severity: ask(`Vulnerability ${i} - Severity:`),
         count: Number(ask(`Vulnerability ${i} - Count:`, "1"))
       });
     }
 
     const comment = ask("Analysis comment:");
-    const addRecommendation = confirm("Add recommendation? OK = Yes, Cancel = No");
-    const recommendation = addRecommendation
-      ? ask("Recommendation:")
-      : "";
-
+    const addRec = confirm("Add recommendation? OK = Yes, Cancel = No");
+    const recommendation = addRec ? ask("Recommendation:") : "";
     const glapi = ask("GLAPI Level:");
     const fp = ask("Number of False Positives:", "0");
     const confirmed = ask("Number of Confirmed vulnerabilities:", String(total));
-
-    const packageBreakdown = packages
-      .map(p => `${p.name} | ${p.severity} | Count: ${p.count}`)
-      .join("\n");
 
     const outputComments = comment;
 
@@ -57,10 +48,10 @@
       "",
       `Cx1: ${cx1}`,
       `Branch: ${branch}`,
-      `Vulnerability Breakdown:`,
-      packageBreakdown,
+      "Vulnerability Breakdown:",
+      ...packages.map(p => `${p.name} | ${p.severity} | Count: ${p.count}`),
       `Comment: ${comment}`,
-      ...(addRecommendation ? [`Recommendation: ${recommendation}`] : [])
+      ...(addRec ? [`Recommendation: ${recommendation}`] : [])
     ].join("\n");
 
     const yellowNotes = [
@@ -68,33 +59,29 @@
       `AppSVC ID: ${appId};`,
       `Task_Sub_Category: ${requestType};`,
       `GLAPI_Level: ${glapi};`,
-      `Remediation_Guidance_Provided: ${addRecommendation ? "Yes" : "No"};`,
+      `Remediation_Guidance_Provided: ${addRec ? "Yes" : "No"};`,
       "Triage done: Yes;",
       `Number Vulnerability Triaged: FP | ${fp} | Confirmed | ${confirmed};`,
-      ...["Critical", "High", "Medium", "Low", "Info"].map(severity => {
+      ...["Critical", "High", "Medium", "Low", "Info"].map(s => {
         const count = packages
-          .filter(p => p.severity.toLowerCase() === severity.toLowerCase())
-          .reduce((sum, p) => sum + p.count, 0);
-
+          .filter(p => p.severity.toLowerCase() === s.toLowerCase())
+          .reduce((n, p) => n + p.count, 0);
         return count
-          ? `Using Components with known vulnerabilities | ${severity} | Count: ${count};`
+          ? `Using Components with known vulnerabilities | ${s} | Count: ${count};`
           : "";
       }).filter(Boolean),
       "$$$"
     ].join("\n");
 
-    console.log("\n========== OUTPUT COMMENTS ==========\n");
+    console.log("========== OUTPUT COMMENTS ==========");
     console.log(outputComments);
-
-    console.log("\n========== RED NOTES ==========\n");
+    console.log("========== RED NOTES ==========");
     console.log(redNotes);
-
-    console.log("\n========== YELLOW NOTES ==========\n");
+    console.log("========== YELLOW NOTES ==========");
     console.log(yellowNotes);
+    console.log("========== END ==========");
 
-    console.log("\n========== END ==========\n");
-
-  } catch (error) {
-    console.warn(error.message);
+  } catch (e) {
+    console.warn("Note generator:", e.message);
   }
 })();
