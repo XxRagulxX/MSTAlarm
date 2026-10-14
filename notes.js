@@ -2,18 +2,16 @@
 (async () => {
   const ask = (q, d = "") => {
     const v = prompt(q, d);
-    if (v === null) throw "Cancelled";
+    if (v === null) throw new Error("Cancelled");
     return v.trim();
   };
 
   try {
-    // Request details from the current ServiceNow page
-    const page = document.body.innerText;
     const get = label => {
       const el = [...document.querySelectorAll("label")]
         .find(x => x.innerText.trim().includes(label));
       const field = el && document.getElementById(el.htmlFor);
-      return field ? field.value || field.innerText : "";
+      return field ? (field.value || field.innerText || "").trim() : "";
     };
 
     const requestType = ask(
@@ -23,9 +21,13 @@
     const appId = ask("Application Service ID:", get("Application Service ID"));
     const cx1 = ask("Cx1 URL:");
     const total = Number(ask("Number of vulnerabilities:", "1"));
-    const branch = ask("Branch:", get("List Branch Name") || "master");
 
+    if (!Number.isInteger(total) || total < 1)
+      throw new Error("Enter a valid vulnerability count.");
+
+    const branch = ask("Branch:", get("List Branch Name") || "master");
     const packages = [];
+
     for (let i = 1; i <= total; i++) {
       packages.push({
         name: ask(`Vulnerability ${i} - Package name:`),
@@ -35,75 +37,64 @@
     }
 
     const comment = ask("Analysis comment:");
-    const addRec = confirm("Add recommendation? OK = Yes, Cancel = No");
-    const recommendation = addRec ? ask("Recommendation:") : "";
+    const addRecommendation = confirm("Add recommendation? OK = Yes, Cancel = No");
+    const recommendation = addRecommendation
+      ? ask("Recommendation:")
+      : "";
+
     const glapi = ask("GLAPI Level:");
     const fp = ask("Number of False Positives:", "0");
     const confirmed = ask("Number of Confirmed vulnerabilities:", String(total));
 
-    const breakdown = packages.map(p =>
-      `${p.name} | ${p.severity} | Count: ${p.count}`
-    ).join("\n");
+    const packageBreakdown = packages
+      .map(p => `${p.name} | ${p.severity} | Count: ${p.count}`)
+      .join("\n");
 
-    const red = [
+    const outputComments = comment;
+
+    const redNotes = [
       `${requestType} has been completed.`,
       "",
       `Cx1: ${cx1}`,
-      `Severity / Package Breakdown:\n${breakdown}`,
       `Branch: ${branch}`,
+      `Vulnerability Breakdown:`,
+      packageBreakdown,
       `Comment: ${comment}`,
-      ...(addRec ? [`Recommendation: ${recommendation}`] : [])
+      ...(addRecommendation ? [`Recommendation: ${recommendation}`] : [])
     ].join("\n");
 
-    const yellow = [
+    const yellowNotes = [
       "$$$",
       `AppSVC ID: ${appId};`,
       `Task_Sub_Category: ${requestType};`,
       `GLAPI_Level: ${glapi};`,
-      `Remediation_Guidance_Provided: ${addRec ? "Yes" : "No"};`,
+      `Remediation_Guidance_Provided: ${addRecommendation ? "Yes" : "No"};`,
       "Triage done: Yes;",
       `Number Vulnerability Triaged: FP | ${fp} | Confirmed | ${confirmed};`,
-      ...["Critical", "High", "Medium", "Low", "Info"].map(s => {
-        const count = packages.filter(p => p.severity.toLowerCase() === s.toLowerCase())
-          .reduce((n, p) => n + p.count, 0);
-        return count ? `Using Components with known vulnerabilities | ${s} | Count: ${count};` : "";
+      ...["Critical", "High", "Medium", "Low", "Info"].map(severity => {
+        const count = packages
+          .filter(p => p.severity.toLowerCase() === severity.toLowerCase())
+          .reduce((sum, p) => sum + p.count, 0);
+
+        return count
+          ? `Using Components with known vulnerabilities | ${severity} | Count: ${count};`
+          : "";
       }).filter(Boolean),
       "$$$"
     ].join("\n");
 
-    const output = [
-      ["Output Comments", comment],
-      ["Red Notes", red],
-      ["Yellow Notes", yellow]
-    ];
+    console.log("\n========== OUTPUT COMMENTS ==========\n");
+    console.log(outputComments);
 
-    document.getElementById("sn-notes-output")?.remove();
+    console.log("\n========== RED NOTES ==========\n");
+    console.log(redNotes);
 
-    const box = document.createElement("div");
-    box.id = "sn-notes-output";
-    box.style = "position:fixed;z-index:999999;top:5%;left:10%;width:80%;max-height:90%;overflow:auto;background:#111;color:white;padding:20px;border:1px solid #777";
+    console.log("\n========== YELLOW NOTES ==========\n");
+    console.log(yellowNotes);
 
-    box.innerHTML = `<button id="sn-close">Close</button><h2>Generated Notes</h2>`;
+    console.log("\n========== END ==========\n");
 
-    output.forEach(([title, text], i) => {
-      const heading = document.createElement("h3");
-      heading.textContent = title;
-      const area = document.createElement("textarea");
-      area.value = text;
-      area.style = "width:100%;height:130px;background:#222;color:white";
-      const button = document.createElement("button");
-      button.textContent = `Copy ${title}`;
-      button.onclick = () => {
-        area.select();
-        navigator.clipboard.writeText(text).catch(() => document.execCommand("copy"));
-      };
-      box.append(heading, area, button);
-    });
-
-    document.body.appendChild(box);
-    document.getElementById("sn-close").onclick = () => box.remove();
-
-  } catch (e) {
-    if (e !== "Cancelled") alert(String(e));
+  } catch (error) {
+    console.warn(error.message);
   }
 })();
