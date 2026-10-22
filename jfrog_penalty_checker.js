@@ -23,6 +23,24 @@
   }
 
   async function copyText(text) {
+    // DevTools console built-in — no permission needed
+    if (typeof copy === "function") {
+      try { copy(text); console.log("Copied to clipboard."); return; } catch (_) {}
+    }
+    // textarea + execCommand — works without clipboard permission
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;opacity:0;top:0;left:0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      console.log("Copied to clipboard.");
+      return;
+    } catch (_) {}
+    // Last resort: Clipboard API
     try {
       await navigator.clipboard.writeText(text);
       console.log("Copied to clipboard.");
