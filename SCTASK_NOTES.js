@@ -243,7 +243,7 @@ Recommendation: `;
     localStorage.setItem("ApplicationServiceID", currentAppServiceID);
     console.log("Updated ApplicationServiceID in localStorage:", currentAppServiceID);
     const portalUrl =
-      "https://a1-appsvc-portal-ui-prod-eastus2.az3-cias-eastus2-prd-asev3.appserviceenvironment.net/?appsvc=" +
+      "https://e3-appsvc-portal-ui-prod-eastus2.az3-cfes-eastus2-prd-asev3.appserviceenvironment.net/?appsvc=" +
       encodeURIComponent(currentAppServiceID);
     window.open(portalUrl, "_blank");
   } else {
@@ -340,7 +340,8 @@ $$$`;
     ? buildRedNote(requestedFor, taskSubCategory)
     : "";
 
-  const detailsOutput = `Application Service ID: ${applicationServiceID}
+  const detailsOutput = `Application Service Name: ${applicationServiceName}
+Application Service ID: ${applicationServiceID}
 Assignment Group Name: ${assignmentGroup}
 Number: ${number}
 Request Item: ${requestItem}
