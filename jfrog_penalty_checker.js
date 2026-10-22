@@ -256,11 +256,25 @@ Status: ${penaltyStatus}`;
       return;
     }
 
-    const selectedVersion = clean(
-      prompt(`Available versions:\n${versions.join(", ")}\n\nEnter version`, versions[0])
+    const versionList = versions.map((v, i) => `${i + 1}. ${v}`).join("\n");
+    console.log("========== AVAILABLE VERSIONS ==========");
+    console.log(versionList);
+    console.log("========================================");
+    const versionChoice = clean(
+      prompt(`${versions.length} versions available — see console for full list.\n\nEnter number`, "1")
     );
 
-    if (!selectedVersion) { console.log("Version not provided."); return; }
+    if (!versionChoice) { console.log("Version not provided."); return; }
+
+    let selectedVersion = "";
+    if (/^\d+$/.test(versionChoice)) {
+      const idx = Number(versionChoice) - 1;
+      selectedVersion = versions[idx] || "";
+    } else {
+      selectedVersion = versionChoice;
+    }
+
+    if (!selectedVersion) { console.log("Invalid version selection."); return; }
 
     const versionMatches = versioned
       .filter(x => x.version === selectedVersion)
