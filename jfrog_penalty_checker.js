@@ -153,7 +153,25 @@
             : [];
 
     const repoInfo = rows[0] || {};
-    const selectedRepos = Array.isArray(repoInfo.selectedRepos) ? repoInfo.selectedRepos : [];
+    console.log("[PenaltyCheck] raw repoInfo:", repoInfo);
+
+    // JFrog may use 'repositories', 'selectedRepos', or 'repos' depending on version
+    const rawSelected =
+      repoInfo.selectedRepos ||
+      repoInfo.repositories ||
+      repoInfo.repos ||
+      [];
+
+    // Normalise: items can be plain strings OR objects like { repoKey: "..." }
+    const selectedRepos = Array.isArray(rawSelected)
+      ? rawSelected.map(r =>
+          typeof r === "object"
+            ? clean(r.repoKey || r.key || r.name || "")
+            : clean(String(r))
+        )
+      : [];
+
+    console.log("[PenaltyCheck] selectedRepos:", selectedRepos);
     const packageType = clean(repoInfo.packageType || "Npm");
 
     let matchedSelected = selectedRepos.find(x => eqIgnoreCase(x, penaltyName)) || "";
