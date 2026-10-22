@@ -142,37 +142,39 @@
     }
 
     const infoData = await infoRes.json();
-    const rows = Array.isArray(infoData)
-      ? infoData
-      : Array.isArray(infoData?.data)
-        ? infoData.data
-        : Array.isArray(infoData?.data?.repositories)
-          ? infoData.data.repositories
-          : Array.isArray(infoData?.results)
-            ? infoData.results
-            : [];
 
-    const repoInfo = rows[0] || {};
-    console.log("[PenaltyCheck] raw repoInfo:", repoInfo);
+    // API returns a single virtualRepoConfig object, not an array
+    const repoInfo =
+      (Array.isArray(infoData) ? infoData[0] : null) ||
+      (Array.isArray(infoData?.data) ? infoData.data[0] : null) ||
+      infoData ||
+      {};
 
-    // JFrog may use 'repositories', 'selectedRepos', or 'repos' depending on version
+    // Path: basic.selectedRepositoriesList — items are { repoName, type }
     const rawSelected =
-      repoInfo.selectedRepos ||
-      repoInfo.repositories ||
-      repoInfo.repos ||
+      repoInfo?.basic?.selectedRepositoriesList ||
+      repoInfo?.basic?.selectedRepositories ||
+      repoInfo?.selectedRepositoriesList ||
+      repoInfo?.selectedRepos ||
+      repoInfo?.repositories ||
       [];
 
-    // Normalise: items can be plain strings OR objects like { repoKey: "..." }
     const selectedRepos = Array.isArray(rawSelected)
       ? rawSelected.map(r =>
           typeof r === "object"
-            ? clean(r.repoKey || r.key || r.name || "")
+            ? clean(r.repoName || r.repoKey || r.key || r.name || "")
             : clean(String(r))
         )
       : [];
 
     console.log("[PenaltyCheck] selectedRepos:", selectedRepos);
-    const packageType = clean(repoInfo.packageType || "Npm");
+
+    // packageType lives at general.projectKey in the new response shape
+    const packageType = clean(
+      repoInfo?.general?.projectKey ||
+      repoInfo?.packageType ||
+      "Npm"
+    );
 
     let matchedSelected = selectedRepos.find(x => eqIgnoreCase(x, penaltyName)) || "";
     let matchedAvailableLocal = "";
