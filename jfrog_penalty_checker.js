@@ -402,12 +402,93 @@ Status: ${penaltyStatus}`;
 
     const selectedCVE = selectedIssue ? extractBestCVE(selectedIssue) : "NOT_FOUND";
 
+    // ── Latest version suggestion ─────────────────────────────────────────
+    const latestVersion = versions[versions.length - 1];
+    let latestSuggestion = "";
+
+    if (selectedVersion !== latestVersion) {
+      const latestMatches = versioned
+        .filter(x => x.version === latestVersion)
+        .map(x => x.item);
+
+      const latestChosen =
+        latestMatches.find(r => r.repoKey === selectedRepo && !/\.json$/i.test(r.name || "")) ||
+        latestMatches.find(r => r.repoKey === selectedRepo) ||
+        latestMatches.find(r => !/\.json$/i.test(r.name || "")) ||
+        latestMatches[0];
+
+      if (latestChosen) {
+        try {
+          const latestGeneralRes = await fetch("/ui/api/v1/ui/artifactgeneral", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json, */*",
+              "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify({
+              path: latestChosen.relativePath,
+              repoKey: latestChosen.repoKey,
+              type: "file"
+            })
+          });
+
+          const latestGeneralData = latestGeneralRes.ok ? await latestGeneralRes.json() : {};
+          const latestInfo = latestGeneralData.info || {};
+
+          const latestPkgType = inferPackageType(
+            latestChosen.repoKey,
+            latestInfo.name || latestChosen.name,
+            latestChosen.relativePath,
+            latestInfo.moduleID
+          );
+          const latestPackageId = inferPackageId(latestPkgType, packageName);
+          const latestRepoPath = latestInfo.repositoryPath || `${latestChosen.repoKey}/${latestChosen.relativePath}`;
+
+          const latestIssuesPayload = {
+            package_id: latestPackageId,
+            path: latestRepoPath,
+            version: latestVersion,
+            scanType: "repositories",
+            issue_kind: 0,
+            key: "",
+            multiScanId: "",
+            isGitRepoMultiscan: false
+          };
+
+          let latestIssue = null;
+          let latestSeverity = "NOT_FOUND";
+
+          for (const sev of severityOrder) {
+            const issue = await fetchIssuesBySeverity(latestIssuesPayload, sev);
+            if (issue) {
+              latestIssue = issue;
+              latestSeverity = clean(issue.severity) || sev.toUpperCase();
+              break;
+            }
+          }
+
+          const latestCVE = latestIssue ? extractBestCVE(latestIssue) : "NOT_FOUND";
+
+          latestSuggestion =
+            `\n[!] Newer version available in JFrog: ${latestVersion}` +
+            `\n    Severity : ${latestSeverity}` +
+            `\n    CVE      : ${latestCVE}`;
+        } catch (_) {
+          latestSuggestion =
+            `\n[!] Newer version available in JFrog: ${latestVersion}` +
+            `\n    (Could not fetch vulnerability info for latest version)`;
+        }
+      }
+    }
+
     const jfrogOutput = `Package: ${packageName}
 Version: ${selectedVersion}
 Repository: ${chosen.repoKey || "NOT_FOUND"}
 Path: ${chosen.relativePath || "NOT_FOUND"}
 Severity: ${selectedSeverity}
-CVE: ${selectedCVE}`;
+CVE: ${selectedCVE}${latestSuggestion}`;
 
     // ── Combined Output ───────────────────────────────────────────────────
 
